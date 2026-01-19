@@ -7,6 +7,8 @@ Pre-admission intake form for elderly patients
 import streamlit as st
 from datetime import datetime, date
 from io import BytesIO
+from pathlib import Path
+import base64
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -22,83 +24,118 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for elderly-friendly design
+# Custom CSS for elderly-friendly design - HIGH CONTRAST LIGHT THEME
 st.markdown("""
 <style>
-    /* Main container styling */
+    /* Force light background throughout */
+    .stApp {
+        background-color: #ffffff !important;
+    }
+
+    .main {
+        background-color: #ffffff !important;
+    }
+
     .main .block-container {
+        background-color: #ffffff !important;
         padding: 2rem 3rem;
         max-width: 1000px;
     }
 
-    /* Large fonts throughout */
+    /* Large fonts throughout - DARK TEXT */
     html, body, [class*="css"] {
         font-size: 20px !important;
         font-family: Arial, sans-serif !important;
+        color: #1a1a1a !important;
+        background-color: #ffffff !important;
     }
 
-    /* Headers */
+    /* Headers - DARK BLUE on WHITE */
     h1 {
         font-size: 42px !important;
         font-weight: bold !important;
-        color: #1a365d !important;
+        color: #003366 !important;
+        background-color: transparent !important;
         margin-bottom: 1rem !important;
     }
 
     h2 {
         font-size: 36px !important;
         font-weight: bold !important;
-        color: #2c5282 !important;
+        color: #003366 !important;
+        background-color: transparent !important;
         margin-top: 2rem !important;
         margin-bottom: 1rem !important;
         padding-bottom: 0.5rem !important;
-        border-bottom: 3px solid #2c5282 !important;
+        border-bottom: 3px solid #003366 !important;
     }
 
     h3 {
         font-size: 28px !important;
         font-weight: bold !important;
-        color: #2d3748 !important;
+        color: #1a1a1a !important;
+        background-color: transparent !important;
         margin-top: 1.5rem !important;
     }
 
-    /* Labels and text */
+    /* Labels and text - BLACK on WHITE */
     label {
         font-size: 24px !important;
         font-weight: 600 !important;
-        color: #1a202c !important;
+        color: #000000 !important;
+        background-color: transparent !important;
     }
 
-    p, span, div {
+    p {
         font-size: 22px !important;
         line-height: 1.6 !important;
+        color: #1a1a1a !important;
+        background-color: transparent !important;
     }
 
-    /* Input fields */
+    span {
+        color: #1a1a1a !important;
+    }
+
+    /* Input fields - WHITE background, BLACK text, DARK border */
     .stTextInput > div > div > input {
         font-size: 24px !important;
         padding: 15px !important;
-        border: 3px solid #4a5568 !important;
+        border: 3px solid #333333 !important;
         border-radius: 10px !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
     }
 
     .stTextArea > div > div > textarea {
         font-size: 22px !important;
         padding: 15px !important;
-        border: 3px solid #4a5568 !important;
+        border: 3px solid #333333 !important;
         border-radius: 10px !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
     }
 
     .stSelectbox > div > div {
         font-size: 24px !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .stSelectbox > div > div > div {
+        background-color: #ffffff !important;
+        color: #000000 !important;
     }
 
     .stDateInput > div > div > input {
         font-size: 24px !important;
         padding: 15px !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 3px solid #333333 !important;
     }
 
-    /* Radio buttons and checkboxes - LARGE */
+    /* Radio buttons and checkboxes - HIGH CONTRAST */
     .stRadio > div {
         gap: 15px !important;
     }
@@ -106,27 +143,37 @@ st.markdown("""
     .stRadio > div > label {
         font-size: 24px !important;
         padding: 20px 30px !important;
-        background-color: #f7fafc !important;
-        border: 3px solid #cbd5e0 !important;
+        background-color: #f5f5f5 !important;
+        border: 3px solid #333333 !important;
         border-radius: 15px !important;
         cursor: pointer !important;
         transition: all 0.3s ease !important;
         display: flex !important;
         align-items: center !important;
         min-height: 70px !important;
+        color: #000000 !important;
     }
 
     .stRadio > div > label:hover {
-        background-color: #e2e8f0 !important;
-        border-color: #2c5282 !important;
+        background-color: #e0e0e0 !important;
+        border-color: #003366 !important;
+    }
+
+    .stRadio > div > label > div {
+        color: #000000 !important;
     }
 
     .stCheckbox > label {
         font-size: 24px !important;
         padding: 15px !important;
+        color: #000000 !important;
     }
 
-    /* Buttons - LARGE and prominent */
+    .stCheckbox > label > span {
+        color: #000000 !important;
+    }
+
+    /* Buttons - HIGH CONTRAST */
     .stButton > button {
         font-size: 28px !important;
         font-weight: bold !important;
@@ -135,76 +182,175 @@ st.markdown("""
         min-height: 80px !important;
         width: 100% !important;
         transition: all 0.3s ease !important;
+        border: 3px solid #333333 !important;
+    }
+
+    /* Primary button - DARK BLUE */
+    .stButton > button[kind="primary"] {
+        background-color: #003366 !important;
+        color: #ffffff !important;
+        border: 3px solid #003366 !important;
+    }
+
+    /* Secondary button - WHITE with dark border */
+    .stButton > button[kind="secondary"] {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 3px solid #333333 !important;
     }
 
     .stButton > button:hover {
         transform: scale(1.02) !important;
+        opacity: 0.9 !important;
     }
 
     /* Progress bar */
     .stProgress > div > div > div > div {
-        background-color: #2c5282 !important;
+        background-color: #003366 !important;
         height: 20px !important;
         border-radius: 10px !important;
+    }
+
+    .stProgress > div > div {
+        background-color: #e0e0e0 !important;
     }
 
     /* Section dividers */
     hr {
         border: none !important;
         height: 4px !important;
-        background-color: #e2e8f0 !important;
+        background-color: #cccccc !important;
         margin: 2rem 0 !important;
     }
 
-    /* Success/info messages */
-    .stSuccess, .stInfo, .stWarning {
-        font-size: 24px !important;
+    /* Info/Success messages - HIGH CONTRAST */
+    .stAlert {
+        background-color: #e8f4f8 !important;
+        color: #000000 !important;
+        border: 2px solid #003366 !important;
+        font-size: 22px !important;
         padding: 20px !important;
-        border-radius: 15px !important;
+        border-radius: 10px !important;
+    }
+
+    .stAlert > div {
+        color: #000000 !important;
     }
 
     /* Expander styling */
     .streamlit-expanderHeader {
         font-size: 26px !important;
         font-weight: bold !important;
+        background-color: #f5f5f5 !important;
+        color: #000000 !important;
+    }
+
+    .streamlit-expanderContent {
+        background-color: #ffffff !important;
+        color: #000000 !important;
     }
 
     /* Number input */
     .stNumberInput > div > div > input {
         font-size: 24px !important;
         padding: 15px !important;
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 3px solid #333333 !important;
     }
 
-    /* Question boxes */
-    .question-box {
-        background-color: #f7fafc;
-        padding: 25px;
-        border-radius: 15px;
-        margin: 20px 0;
-        border-left: 6px solid #2c5282;
+    /* Slider */
+    .stSlider > div > div {
+        color: #000000 !important;
     }
 
-    /* Yes/No button styling */
-    div[data-testid="stHorizontalBlock"] > div {
-        padding: 5px !important;
+    .stSlider label {
+        color: #000000 !important;
+    }
+
+    /* Multiselect */
+    .stMultiSelect > div > div {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 3px solid #333333 !important;
     }
 
     /* Hide hamburger menu and footer */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Custom button classes */
-    .yes-button button {
-        background-color: #276749 !important;
-        color: white !important;
+    /* Download button */
+    .stDownloadButton > button {
+        background-color: #006633 !important;
+        color: #ffffff !important;
+        border: 3px solid #006633 !important;
     }
 
-    .no-button button {
-        background-color: #c53030 !important;
-        color: white !important;
+    /* Markdown text */
+    .stMarkdown {
+        color: #1a1a1a !important;
+    }
+
+    /* Ensure all text is readable */
+    .element-container {
+        color: #1a1a1a !important;
+    }
+
+    /* Logo header styling */
+    .logo-header {
+        text-align: center;
+        padding: 20px;
+        background-color: #ffffff;
+        border-bottom: 3px solid #003366;
+        margin-bottom: 20px;
+    }
+
+    .hospital-title {
+        font-size: 32px !important;
+        color: #003366 !important;
+        font-weight: bold !important;
+        margin: 10px 0 !important;
+    }
+
+    .hospital-subtitle {
+        font-size: 24px !important;
+        color: #666666 !important;
+        margin: 5px 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
+
+
+def render_logo_header():
+    """Render the hospital logo and header"""
+    # Check if logo exists
+    logo_path = Path(__file__).parent / "assets" / "logo.png"
+
+    st.markdown('<div class="logo-header">', unsafe_allow_html=True)
+
+    if logo_path.exists():
+        # Display the logo
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.image(str(logo_path), width=350)
+    else:
+        # Placeholder for logo
+        st.markdown("""
+        <div style="text-align: center; padding: 20px; background-color: #f5f5f5; border: 2px dashed #999; border-radius: 10px; margin-bottom: 10px;">
+            <p style="color: #666; font-size: 18px; margin: 0;">
+                [Hospital Logo]<br>
+                <small>Place logo.png in the assets folder</small>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Hospital name
+    st.markdown("""
+    <p class="hospital-title">Hopital general juif / Jewish General Hospital</p>
+    <p class="hospital-subtitle">Geriatric Clinic - Patient Intake Form</p>
+    """, unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def initialize_session_state():
@@ -1394,11 +1540,11 @@ def render_navigation():
 def render_completion_page():
     """Render the form completion page"""
     st.markdown("""
-    <div style="text-align: center; padding: 50px;">
-        <h1 style="color: #276749; font-size: 48px;">Thank You!</h1>
-        <p style="font-size: 28px; margin: 30px 0;">Your form has been submitted successfully.</p>
-        <p style="font-size: 24px;">Please return the tablet to the receptionist.</p>
-        <p style="font-size: 24px;">A healthcare professional will be with you shortly.</p>
+    <div style="text-align: center; padding: 50px; background-color: #ffffff;">
+        <h1 style="color: #006633; font-size: 48px; background-color: transparent;">Thank You!</h1>
+        <p style="font-size: 28px; margin: 30px 0; color: #1a1a1a; background-color: transparent;">Your form has been submitted successfully.</p>
+        <p style="font-size: 24px; color: #1a1a1a; background-color: transparent;">Please return the tablet to the receptionist.</p>
+        <p style="font-size: 24px; color: #1a1a1a; background-color: transparent;">A healthcare professional will be with you shortly.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1414,9 +1560,8 @@ def main():
     """Main application function"""
     initialize_session_state()
 
-    # Header
-    st.title("Jewish General Hospital")
-    st.markdown("### Geriatric Clinic - Patient Intake Form")
+    # Logo and Header
+    render_logo_header()
 
     if st.session_state.form_completed:
         render_completion_page()
